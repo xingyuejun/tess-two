@@ -1,4 +1,14 @@
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 # Set some language specific variables. Works in conjunction with
 # tesstrain.sh
 #
@@ -67,6 +77,39 @@ LATIN_FONTS=(
     "Century Schoolbook L Bold Italic" \
     "Century Schoolbook L Medium" \
     "DejaVu Sans Ultra-Light" \
+)
+
+# List of fonts for printed/neo-Latin ('lat' language code, different from Latin script)
+NEOLATIN_FONTS=(
+    "GFS Bodoni" \
+    "GFS Bodoni Bold" \
+    "GFS Bodoni Italic" \
+    "GFS Bodoni Bold Italic" \
+    "GFS Didot" \
+    "GFS Didot Bold" \
+    "GFS Didot Italic" \
+    "GFS Didot Bold Italic" \
+    "Cardo" \
+    "Cardo Bold" \
+    "Cardo Italic" \
+    "Wyld" \
+    "Wyld Italic" \
+    "EB Garamond" \
+    "EB Garamond Italic" \
+    "Junicode" \
+    "Junicode Bold" \
+    "Junicode Italic" \
+    "Junicode Bold Italic" \
+    "IM FELL DW Pica PRO" \
+    "IM FELL English PRO" \
+    "IM FELL Double Pica PRO" \
+    "IM FELL French Canon PRO" \
+    "IM FELL Great Primer PRO" \
+    "IM FELL DW Pica PRO Italic" \
+    "IM FELL English PRO Italic" \
+    "IM FELL Double Pica PRO Italic" \
+    "IM FELL French Canon PRO Italic" \
+    "IM FELL Great Primer PRO Italic" \
 )
 
 EARLY_LATIN_FONTS=(
@@ -835,6 +878,9 @@ set_lang_specific_parameters() {
   AMBIGS_FILTER_DENOMINATOR="100000"
   LEADING="32"
   MEAN_COUNT="40"  # Default for latin script.
+  # Language to mix with the language for maximum accuracy. Defaults to eng.
+  # If no language is good, set to the base language.
+  MIX_LANG="eng"
 
   case ${lang} in
     # Latin languages.
@@ -853,6 +899,9 @@ set_lang_specific_parameters() {
           FILTER_ARGUMENTS="--make_early_language_variant=ita"
           TEXT2IMAGE_EXTRA_ARGS=" --ligatures"   # Add ligatures when supported.
           test -z "$FONTS" && FONTS=( "${EARLY_LATIN_FONTS[@]}" );;
+    lat )
+          test -z "$EXPOSURES" && EXPOSURES="-3 -2 -1 0 1 2 3"
+          test -z "$FONTS" && FONTS=( "${NEOLATIN_FONTS[@]}" ) ;;
     spa_old )
           TEXT_CORPUS="${FLAGS_webtext_prefix}/spa.corpus.txt"
           # Make long-s substitutions for Early Spanish text
@@ -893,7 +942,6 @@ set_lang_specific_parameters() {
     isl ) ;;
     ita ) ;;
     jav ) ;;
-    lat ) ;;
     lav ) ;;
     lit ) ;;
     mlt ) ;;
@@ -924,11 +972,13 @@ set_lang_specific_parameters() {
           WORD_DAWG_SIZE=1000000
           test -z "$FONTS" && FONTS=( "${EARLY_LATIN_FONTS[@]}" );;
 
-    # Cyrillic script-based languages.
+    # Cyrillic script-based languages. It is bad to mix Latin with Cyrillic.
     rus ) test -z "$FONTS" && FONTS=( "${RUSSIAN_FONTS[@]}" )
+          MIX_LANG="rus"
           NUMBER_DAWG_FACTOR=0.05
           WORD_DAWG_SIZE=1000000 ;;
     aze_cyrl | bel | bul | kaz | mkd | srp | tgk | ukr | uzb_cyrl )
+          MIX_LANG="${lang}"
           test -z "$FONTS" && FONTS=( "${RUSSIAN_FONTS[@]}" ) ;;
 
     # Special code for performing Cyrillic language-id that is trained on

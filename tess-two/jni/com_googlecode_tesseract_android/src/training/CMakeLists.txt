@@ -2,10 +2,16 @@
 # tesseract
 #
 
-if (STATIC OR NOT (WIN32 OR CYGWIN))
+if (NOT CPPAN_BUILD AND NOT (WIN32 OR CYGWIN))
+    return()
+endif()
+
+if (CPPAN_BUILD)
+    set(ICU_FOUND 1)
+endif()
 
 # experimental
-if (MSVC)
+if (MSVC AND NOT CPPAN_BUILD)
 
 include(CheckTypeSize)
 check_type_size("void *" SIZEOF_VOID_P)
@@ -35,6 +41,7 @@ file(DOWNLOAD
     "http://download.icu-project.org/files/icu4c/56.1/icu4c-56_1-Win${ARCH_DIR_NAME}-msvc10.zip"
     "${icu_archive}"
     SHOW_PROGRESS
+    INACTIVITY_TIMEOUT 60 # seconds
     EXPECTED_HASH MD5=${icu_hash}
 )
 execute_process(COMMAND ${CMAKE_COMMAND} -E tar xz "${icu_archive}"
@@ -47,10 +54,12 @@ endif()
 
 set(ICU_ROOT ${icu_dir}/icu)
 
-endif(MSVC)
+endif()
 # experimental
 
+if (NOT CPPAN_BUILD)
 find_package(ICU COMPONENTS uc i18n)
+endif()
 
 ########################################
 # LIBRARY tessopt
@@ -73,7 +82,7 @@ set(common_training_hdr
     commontraining.h
 )
 add_library                 (common_training ${common_training_src} ${common_training_hdr})
-target_link_libraries       (common_training tesseract tessopt)
+target_link_libraries       (common_training libtesseract tessopt)
 project_group               (common_training "Training Tools")
 
 
@@ -82,7 +91,7 @@ project_group               (common_training "Training Tools")
 ########################################
 
 add_executable              (ambiguous_words ambiguous_words.cpp)
-target_link_libraries       (ambiguous_words tesseract)
+target_link_libraries       (ambiguous_words libtesseract)
 project_group               (ambiguous_words "Training Tools")
 
 
@@ -100,7 +109,7 @@ project_group               (classifier_tester "Training Tools")
 ########################################
 
 add_executable              (combine_tessdata combine_tessdata.cpp)
-target_link_libraries       (combine_tessdata tesseract)
+target_link_libraries       (combine_tessdata libtesseract)
 project_group               (combine_tessdata "Training Tools")
 
 
@@ -118,7 +127,7 @@ project_group               (cntraining "Training Tools")
 ########################################
 
 add_executable              (dawg2wordlist dawg2wordlist.cpp)
-target_link_libraries       (dawg2wordlist tesseract)
+target_link_libraries       (dawg2wordlist libtesseract)
 project_group               (dawg2wordlist "Training Tools")
 
 
@@ -145,7 +154,7 @@ project_group               (shapeclustering "Training Tools")
 ########################################
 
 add_executable              (unicharset_extractor unicharset_extractor.cpp)
-target_link_libraries       (unicharset_extractor tesseract tessopt)
+target_link_libraries       (unicharset_extractor libtesseract tessopt)
 project_group               (unicharset_extractor "Training Tools")
 
 
@@ -154,7 +163,7 @@ project_group               (unicharset_extractor "Training Tools")
 ########################################
 
 add_executable              (wordlist2dawg wordlist2dawg.cpp)
-target_link_libraries       (wordlist2dawg tesseract)
+target_link_libraries       (wordlist2dawg libtesseract)
 project_group               (wordlist2dawg "Training Tools")
 
 
@@ -164,7 +173,9 @@ project_group               (wordlist2dawg "Training Tools")
 
 if (ICU_FOUND)
 
+if (NOT CPPAN_BUILD)
 include_directories(${ICU_INCLUDE_DIRS})
+endif()
 
 add_executable              (set_unicharset_properties
     set_unicharset_properties.cpp
@@ -176,7 +187,11 @@ add_executable              (set_unicharset_properties
     normstrngs.h
     icuerrorcode.h
 )
+if (NOT CPPAN_BUILD)
 target_link_libraries       (set_unicharset_properties common_training ${ICU_LIBRARIES})
+else()
+target_link_libraries       (set_unicharset_properties common_training pvt.cppan.demo.unicode.icu.i18n)
+endif()
 project_group               (set_unicharset_properties "Training Tools")
 
 
@@ -220,7 +235,7 @@ endif()
 add_executable              (text2image ${text2image_src})
 target_include_directories  (text2image BEFORE PRIVATE ${Cairo_INCLUDE_DIRS} ${Pango_INCLUDE_DIRS})
 target_compile_definitions  (text2image PRIVATE -DPANGO_ENABLE_ENGINE)
-target_link_libraries       (text2image tesseract common_training
+target_link_libraries       (text2image libtesseract common_training
     ${ICU_LIBRARIES}
     ${Pango_LIBRARIES}
     ${Cairo_LIBRARIES}
@@ -232,6 +247,5 @@ project_group               (text2image "Training Tools")
 
 endif(PKG_CONFIG_FOUND)
 endif(ICU_FOUND)
-endif(STATIC OR NOT (WIN32 OR CYGWIN))
 
 ###############################################################################

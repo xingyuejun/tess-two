@@ -6,8 +6,14 @@ additional functions. Tesseract Tools for Android is a set of Android APIs and
 build files for the [Tesseract OCR][tesseract-ocr] and [Leptonica][leptonica] 
 image processing libraries.
 
-This project works with Tesseract 3.05.00dev, Leptonica 1.73, libjpeg 9b, and
-libpng 1.6.20. The source code for these dependencies is included within the
+This project works with:
+
+ - Tesseract 3.05
+ - Leptonica 1.74.1
+ - libjpeg 9b
+ - libpng 1.6.25
+ 
+The source code for these dependencies is included within the
 `tess-two/jni` folder. 
 
 The `tess-two` module contains tools for compiling the Tesseract and Leptonica
@@ -24,8 +30,8 @@ The `tess-two-test` module contains instrumented unit tests for tess-two.
 ## Pre-requisites
 
 * Android 2.3 or higher
-* A v3.02+ [trained data file][tessdata] for a language. Data files must be 
-extracted to the Android device in a subdirectory named `tessdata`.
+* A v3.04 [trained data file][tessdata] for a language. Data files must be 
+copied to the Android device in a subdirectory named `tessdata`.
 
 ## Usage
 
@@ -33,7 +39,7 @@ To use tess-two from your app, edit your app module's `build.gradle` file to add
 tess-two as an external dependency:
 
 	dependencies {
-	    compile 'com.rmtheis:tess-two:6.0.4'
+	    implementation 'com.rmtheis:tess-two:9.0.0'
 	}
 	
 [Javadoc][javadoc] is available.
@@ -49,6 +55,8 @@ you may build the project yourself locally. See [BUILDING.md](BUILDING.md).
 Release points are tagged with [version numbers][semantic-versioning]. A change 
 to the major version number indicates an API change making that version 
 incompatible with previous versions.
+
+The [change log](CHANGELOG.md) shows what's new in each version.
 
 ## Support
 
@@ -76,12 +84,19 @@ submitting a pull request through GitHub.
     See the License for the specific language governing permissions and
     limitations under the License.
 
+## See Also
+
+The Google Mobile Vision API team has made available an OCR capability that is
+provided to developers through the Google Play Services library: The
+[Mobile Vision API][mobile-vision-api] offers a simple API for OCR that
+currently works for Latin-based characters.
 
 [tesseract-android-tools]: https://github.com/alanv/tesseract-android-tools
 [tesseract-ocr]: https://github.com/tesseract-ocr/tesseract
 [leptonica]: https://github.com/DanBloomberg/leptonica
 [eyes-free]: https://github.com/rmtheis/eyes-free
-[tessdata]: https://github.com/tesseract-ocr/tessdata
+[tessdata]: https://github.com/tesseract-ocr/tessdata/tree/3.04.00
 [javadoc]: https://rmtheis.github.io/tess-two/javadoc/index.html
 [semantic-versioning]: http://semver.org
 [stackoverflow]: https://stackoverflow.com/
+[mobile-vision-api]: https://developers.google.com/vision/

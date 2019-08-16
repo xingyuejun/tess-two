@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import junit.framework.TestCase;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -40,6 +41,17 @@ public class TessPdfRendererTest extends TestCase {
 
     @SuppressLint("SdCardPath")
     private final static String OUTPUT_PATH = "/sdcard/";
+
+    @Override
+    protected void setUp() throws Exception {
+        super.setUp();
+
+        // Grant permission to use external storage
+        AllTests.grantPermissions(new String[] {
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+        });
+    }
 
     @SmallTest
     public void testCreate() {
@@ -75,7 +87,7 @@ public class TessPdfRendererTest extends TestCase {
 
         // Start the PDF writing process.
         boolean beginSuccess = baseApi.beginDocument(pdfRenderer, "title");
-        // assertTrue(beginSuccess);
+        assertTrue(beginSuccess);
 
         // Add a page to the PDF.
         final Pix pixOne = getTextImage("page one", 640, 480);

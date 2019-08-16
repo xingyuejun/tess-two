@@ -1,7 +1,7 @@
 /**********************************************************************
  * File:        ocrclass.h
  * Description: Class definitions and constants for the OCR API.
- * Author:					Hewlett-Packard Co
+ * Author:          Hewlett-Packard Co
  *
  * (C) Copyright 1996, Hewlett-Packard Co.
  ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,7 +29,6 @@
 
 #ifndef __GNUC__
 #ifdef _WIN32
-#include          <windows.h>
 #include          "gettimeofday.h"
 #endif
 #else
@@ -101,6 +100,8 @@ typedef struct {                  /*single character */
  * the OCR engine is storing its output to shared memory.
  * During progress, all the buffer info is -1.
  * Progress starts at 0 and increases to 100 during OCR. No other constraint.
+ * Additionally the progress callback contains the bounding box of the word that
+ * is currently being processed.
  * Every progress callback, the OCR engine must set ocr_alive to 1.
  * The HP side will set ocr_alive to 0. Repeated failure to reset
  * to 1 indicates that the OCR engine is dead.

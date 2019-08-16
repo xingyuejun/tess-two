@@ -16,14 +16,7 @@
 
 package com.googlecode.tesseract.android.test;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.List;
-
-import junit.framework.TestCase;
-
-import android.annotation.SuppressLint;
+import android.Manifest;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.CompressFormat;
 import android.graphics.Canvas;
@@ -32,6 +25,8 @@ import android.graphics.Paint;
 import android.graphics.Paint.Align;
 import android.graphics.Paint.Style;
 import android.graphics.Rect;
+import android.os.AsyncTask;
+import android.os.Environment;
 import android.test.suitebuilder.annotation.SmallTest;
 import android.text.Html;
 import android.util.Pair;
@@ -44,11 +39,18 @@ import com.googlecode.tesseract.android.TessBaseAPI.PageIteratorLevel;
 import com.googlecode.tesseract.android.TessBaseAPI.ProgressNotifier;
 import com.googlecode.tesseract.android.TessBaseAPI.ProgressValues;
 
+import junit.framework.TestCase;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.List;
+import java.util.concurrent.Semaphore;
+
 public class TessBaseAPITest extends TestCase {
-    @SuppressLint("SdCardPath")
-    static final String TESSBASE_PATH = "/sdcard/tesseract/";
+    static final String TESSBASE_PATH = Environment.getExternalStorageDirectory().toString();
     static final String DEFAULT_LANGUAGE = "eng";
-    private static final String TESSDATA_PATH = TESSBASE_PATH + "tessdata/";
+    private static final String TESSDATA_PATH = TESSBASE_PATH + "/tessdata/";
     private static final String[] EXPECTED_CUBE_DATA_FILES_ENG = {
         "eng.cube.bigrams",
         "eng.cube.fold",
@@ -60,18 +62,24 @@ public class TessBaseAPITest extends TestCase {
         "eng.tesseract_cube.nn"
     };
 
-    private static final int DEFAULT_PAGE_SEG_MODE = 
+    private static final int DEFAULT_PAGE_SEG_MODE =
             TessBaseAPI.PageSegMode.PSM_SINGLE_BLOCK;
 
     protected void setUp() throws Exception {
         super.setUp();
 
+        // Grant permission to use external storage
+        AllTests.grantPermissions(new String[] {
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+        });
+
         // Check that the data file(s) exist.
         for (String languageCode : DEFAULT_LANGUAGE.split("\\+")) {
             if (!languageCode.startsWith("~")) {
-                File expectedFile = new File(TESSDATA_PATH + File.separator + 
+                File expectedFile = new File(TESSDATA_PATH + File.separator +
                         languageCode + ".traineddata");
-                assertTrue("Make sure that you've copied " + languageCode + 
+                assertTrue("Make sure that you've copied " + languageCode +
                         ".traineddata to " + TESSDATA_PATH, expectedFile.exists());
             }
         }
@@ -82,7 +90,7 @@ public class TessBaseAPITest extends TestCase {
         for (String expectedFilename : EXPECTED_CUBE_DATA_FILES_ENG) {
             String expectedFilePath = TESSDATA_PATH + expectedFilename;
             File expectedFile = new File(expectedFilePath);
-            assertTrue("Make sure that you've copied " + expectedFilename + 
+            assertTrue("Make sure that you've copied " + expectedFilename +
                     " to " + expectedFilePath, expectedFile.exists());
         }
     }
@@ -110,7 +118,7 @@ public class TessBaseAPITest extends TestCase {
         List<Pair<String, Double>> choicesAndConfidences;
         iterator.begin();
         do {
-            choicesAndConfidences = iterator.getChoicesAndConfidence(PageIteratorLevel.RIL_SYMBOL);
+            choicesAndConfidences = iterator.getSymbolChoicesAndConfidence();
             assertNotNull("Invalid result.", choicesAndConfidences);
 
             for (Pair<String, Double> choiceAndConfidence : choicesAndConfidences) {
@@ -131,19 +139,47 @@ public class TessBaseAPITest extends TestCase {
 
     private static Bitmap getTextImage(String text, int width, int height) {
         final Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-        final Paint paint = new Paint();
+
         final Canvas canvas = new Canvas(bmp);
-
         canvas.drawColor(Color.WHITE);
+        drawTextNewLines(text, canvas);
 
+        return bmp;
+    }
+
+    /**
+     * Draws text (with newlines) centered onto the canvas. If the text does not fit horizontally,
+     * it will be cut off. If the text does not fit vertically, the start of the text will be at
+     * the top of the image and whatever not fitting onto the image being cut off. If the text
+     * fits vertically it will be centered vertically.
+     *
+     * @param text String to draw onto the canvas
+     * @param canvas Canvas to draw text onto
+     */
+    private static void drawTextNewLines(String text,  Canvas canvas){
+        final Paint paint = new Paint();
         paint.setColor(Color.BLACK);
         paint.setStyle(Style.FILL);
         paint.setAntiAlias(true);
         paint.setTextAlign(Align.CENTER);
         paint.setTextSize(24.0f);
-        canvas.drawText(text, width / 2, height / 2, paint);
 
-        return bmp;
+        String[] textArray = text.split("\n");
+        int width = canvas.getWidth();
+        int height = canvas.getHeight();
+        int count = textArray.length;
+        int lineSize = (int) (paint.descent() - paint.ascent());
+        int maxLinesToPushUp = height / lineSize;
+        maxLinesToPushUp = count < maxLinesToPushUp ? count : maxLinesToPushUp;
+        int pixelsToPushUp = (maxLinesToPushUp - 1) / 2 * lineSize;
+
+        int x = width / 2;
+        int y = (height / 2) - pixelsToPushUp;
+
+        for (String line : textArray){
+            canvas.drawText(line, x, y, paint);
+            y += lineSize;
+        }
     }
 
     @SmallTest
@@ -371,7 +407,7 @@ public class TessBaseAPITest extends TestCase {
         assertTrue("Result was not high-confidence.", lastConfidence > 80);
         assertTrue("Result bounding box not found.", lastBoundingBox[2] > 0 && lastBoundingBox[3] > 0);
 
-        boolean validBoundingRect =  lastBoundingRect.left < lastBoundingRect.right 
+        boolean validBoundingRect =  lastBoundingRect.left < lastBoundingRect.right
                 && lastBoundingRect.top < lastBoundingRect.bottom;
         assertTrue("Result bounding box Rect is incorrect.", validBoundingRect);
 
@@ -395,7 +431,7 @@ public class TessBaseAPITest extends TestCase {
     public void testInit_ocrEngineMode() {
         // Attempt to initialize the API.
         final TessBaseAPI baseApi = new TessBaseAPI();
-        boolean result = baseApi.init(TESSBASE_PATH, DEFAULT_LANGUAGE, 
+        boolean result = baseApi.init(TESSBASE_PATH, DEFAULT_LANGUAGE,
                 TessBaseAPI.OEM_TESSERACT_ONLY);
 
         assertTrue("Init was unsuccessful.", result);
@@ -484,7 +520,7 @@ public class TessBaseAPITest extends TestCase {
         assertTrue(success);
 
         baseApi.setPageSegMode(TessBaseAPI.PageSegMode.PSM_SINGLE_LINE);
-        baseApi.setVariable(TessBaseAPI.VAR_CHAR_WHITELIST, 
+        baseApi.setVariable(TessBaseAPI.VAR_CHAR_WHITELIST,
                 leftInput + rightInput);
         baseApi.setImage(bmp);
 
@@ -601,13 +637,13 @@ public class TessBaseAPITest extends TestCase {
         assertTrue(success);
 
         // Check the default page segmentation mode.
-        assertEquals("Found unexpected default page segmentation mode.", 
+        assertEquals("Found unexpected default page segmentation mode.",
                 baseApi.getPageSegMode(), DEFAULT_PAGE_SEG_MODE);
 
         // Ensure that the page segmentation mode can be changed.
         final int newPageSegMode = TessBaseAPI.PageSegMode.PSM_SINGLE_CHAR;
         baseApi.setPageSegMode(newPageSegMode);
-        assertEquals("Found unexpected page segmentation mode.", 
+        assertEquals("Found unexpected page segmentation mode.",
                 baseApi.getPageSegMode(), newPageSegMode);
 
         // Attempt to shut down the API.
@@ -687,36 +723,56 @@ public class TessBaseAPITest extends TestCase {
         bmp.recycle();
     }
 
-    //    @SmallTest
-    //    public void testStop() throws InterruptedException {
-    //        final TessBaseAPI baseApi = new TessBaseAPI();
-    //        final String inputText = "The quick brown fox jumps over the lazy dog.";
-    //        final Bitmap bmp = getTextImage(inputText, 640, 480);
-    //
-    //        boolean success = baseApi.init(TESSBASE_PATH, DEFAULT_LANGUAGE);
-    //        assertTrue(success);
-    //
-    //        baseApi.setImage(bmp);
-    //
-    //        class LoopingRecognitionTask extends AsyncTask<Void, Void, Void> {
-    //
-    //            @Override
-    //            protected Void doInBackground(Void... params) {
-    //                while (true)
-    //                    baseApi.getUTF8Text();
-    //            }
-    //        }
-    //
-    //        LoopingRecognitionTask task = new LoopingRecognitionTask();
-    //        task.execute();
-    //
-    //        Thread.sleep(200);
-    //
-    //        baseApi.stop();
-    //
-    //        baseApi.end();
-    //        bmp.recycle();
-    //    }
+    @SmallTest
+    public void testStop() throws InterruptedException {
+
+        StringBuilder inputTextBuilder = new StringBuilder();
+        for (int i = 0; i < 200; i++){
+            inputTextBuilder.append("The quick brown fox jumps over the lazy dog.\n");
+        }
+        final Bitmap bmp = getTextImage(inputTextBuilder.toString(), 640, 4000);
+
+        final Semaphore progressSem = new Semaphore(0);
+        final TessBaseAPI baseApi = new TessBaseAPI(new ProgressNotifier() {
+            @Override
+            public void onProgressValues(ProgressValues progressValues) {
+                if (progressValues.getPercent() > 50){
+                    fail("OCR recognition was too fast, try to increase the image size and amount of text?");
+                }
+                if (progressValues.getPercent() > 1){
+                    progressSem.release();
+                }
+            }
+        });
+
+        class LongRecognitionTask extends AsyncTask<Void, Void, Void> {
+            @Override
+            protected Void doInBackground(Void... params) {
+                baseApi.getHOCRText(0);
+                progressSem.release();
+                return null;
+            }
+        }
+
+        boolean success = baseApi.init(TESSBASE_PATH, DEFAULT_LANGUAGE);
+        assertTrue(success);
+        baseApi.setImage(bmp);
+
+        LongRecognitionTask task = new LongRecognitionTask();
+        task.execute();
+
+        // Wait for recognition to start
+        progressSem.acquire();
+
+        baseApi.stop();
+
+        // Wait for getHOCRText() to complete, otherwise we may end() and recycle baseApi before
+        // getHOCRText() finishes execution on the AsyncTask thread and cause an exception
+        progressSem.acquire();
+
+        baseApi.end();
+        bmp.recycle();
+    }
 
     @SmallTest
     public void testWordConfidences() {
